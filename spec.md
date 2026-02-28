@@ -1,44 +1,32 @@
 # Settled IN
 
 ## Current State
-New project. No existing code.
+- Full-stack app with Navbar, HeroSection, PGSection, FoodSection, TransportSection, LanguageSection, CommunitySection, Footer.
+- Navbar has smooth-scroll links to all sections (Home, Find PG, Food, Transport, Language, Community) -- these already work via `scrollToSection`.
+- A logo image already exists at `/assets/generated/settled-in-logo-transparent.dim_300x80.png` and is referenced in Navbar.
+- PGSection has 3 rotating PG room photos (pg-room-1, pg-room-2, pg-room-3) but only 4 seed listings so the 4th reuses photo index 0.
+- FoodSection has 4 food photos for 6 seed listings (last 2 reuse earlier photos).
+- The logo image was generated in a previous round but may need visual improvement.
 
 ## Requested Changes (Diff)
 
 ### Add
-- Landing page introducing "Settled IN" — a platform helping outstation college students settle into a new city
-- Five core solution sections addressing student pain points:
-  1. **PG/Flat Finder** — Browse and post PG/flat listings with details (location, rent, amenities, photos)
-  2. **Food Guide** — Discover nearby mess, canteens, tiffin services, and restaurants with student-friendly prices
-  3. **Transport Tips** — Local commute guide: bus routes, metro, auto/cab tips, and bike rentals
-  4. **Local Language** — Quick-learn common phrases in the local language to ease communication
-  5. **Social Circle** — Community board where students can post introductions, find roommates, and join city-specific groups
-- Navigation with smooth section scrolling
-- Hero section with tagline and CTA
-- Student-posted listings and community posts (backend-stored)
-- Ability to add a PG/flat listing (form with title, location, rent, amenities, contact)
-- Ability to post a community intro/message (form with name, college, message)
-- Sample seed data for listings and community posts
+- 3 more PG room photos (pg-room-4, pg-room-5, pg-room-6) so all 4+ seed listings have unique photos.
+- A new, polished "Settled IN" logo image (wordmark with icon, transparent background).
+- Wiring: Navbar section-scroll links should also close the mobile menu when tapped (already works -- no change needed).
 
 ### Modify
-- None
+- Replace the existing logo image with the newly generated, higher-quality logo.
+- Update PGSection's `PG_PHOTOS` array to include pg-room-4, pg-room-5, pg-room-6 so every listing gets a unique photo.
+- Update FoodSection's `FOOD_PHOTOS_BY_INDEX` fallback array to include more photos so all 6 food cards have distinct images.
 
 ### Remove
-- None
+- Nothing to remove.
 
 ## Implementation Plan
-1. Backend: Define data types and APIs for:
-   - PG/flat listings (create, list, get by id)
-   - Food spots (list, seeded data)
-   - Community posts (create, list)
-   - Language phrases (seeded static data)
-   - Transport tips (seeded static data)
-2. Frontend: 
-   - Navbar with "Settled IN" branding and section links
-   - Hero section with bold tagline and CTA button
-   - PG/Flat section: listing cards + "Add Listing" form
-   - Food section: cards with mess/restaurant info
-   - Transport section: tips cards
-   - Language section: phrase cards (local phrase + meaning)
-   - Community/Social section: post feed + "Post Introduction" form
-   - Footer with branding
+1. Generate a new Settled IN logo (transparent background, modern wordmark style).
+2. Generate pg-room-4, pg-room-5, pg-room-6 PG room photos.
+3. Generate 2 more food photos (food-cafe, food-dhaba) for the FoodSection fallback array.
+4. Update PGSection to reference all 6 PG photos.
+5. Update FoodSection to reference all 6 food photos (one per spot type).
+6. Verify Navbar logo src matches the newly generated logo filename.

@@ -7,8 +7,20 @@ import Order "mo:core/Order";
 import Set "mo:core/Set";
 import Array "mo:core/Array";
 
+import MixinAuthorization "authorization/MixinAuthorization";
+import AccessControl "authorization/access-control";
+
+
 actor {
-  // Types
+  let accessControlState = AccessControl.initState();
+  include MixinAuthorization(accessControlState);
+
+  public type UserProfile = {
+    name : Text;
+    college : Text;
+    city : Text;
+  };
+
   public type Listing = {
     id : Nat;
     title : Text;
@@ -16,6 +28,7 @@ actor {
     rent : Nat;
     amenities : Text;
     contact : Text;
+    ownerId : ?Text;
     postedBy : Text;
     timestamp : Int;
   };
@@ -35,6 +48,7 @@ actor {
     college : Text;
     city : Text;
     message : Text;
+    ownerId : ?Text;
     timestamp : Int;
   };
 
@@ -61,10 +75,10 @@ actor {
     language : Text;
   };
 
-  // Data Storage
   var nextListingId = 1;
   var nextCommunityPostId = 1;
 
+  let userProfileStore = Map.empty<Principal, UserProfile>();
   let listingStore = Map.empty<Nat, Listing>();
   let communityPostStore = Map.empty<Nat, CommunityPost>();
 
@@ -110,8 +124,58 @@ actor {
     { id = 4; phrase = "Kasa aahes?"; meaning = "How are you?"; language = "Marathi" },
   ]);
 
-  // Listing Functions
-  public shared ({ caller }) func addListing(title : Text, location : Text, rent : Nat, amenities : Text, contact : Text, postedBy : Text) : async Nat {
+  public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view profiles");
+    };
+    userProfileStore.get(caller);
+  };
+
+  public query ({ caller }) func getUserProfile(user : Principal) : async ?UserProfile {
+    if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Can only view your own profile");
+    };
+    userProfileStore.get(user);
+  };
+
+  public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
+    };
+    userProfileStore.add(caller, profile);
+  };
+
+  public shared ({ caller }) func upsertProfile(name : Text, college : Text, city : Text) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can save profiles");
+    };
+
+    let profile : UserProfile = { name; college; city };
+    userProfileStore.add(caller, profile);
+  };
+
+  public query ({ caller }) func getMyProfile() : async UserProfile {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view profiles");
+    };
+    switch (userProfileStore.get(caller)) {
+      case (null) { Runtime.trap("No profile data exists for caller principal. Please log-in and create a profile.") };
+      case (?profile) { profile };
+    };
+  };
+
+  public shared ({ caller }) func addListing(title : Text, location : Text, rent : Nat, amenities : Text, contact : Text) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can add listings");
+    };
+
+    let profile = switch (userProfileStore.get(caller)) {
+      case (null) {
+        Runtime.trap("Profile does not exist for caller. Please create a profile first.");
+      };
+      case (?profile) { profile };
+    };
+
     let listing : Listing = {
       id = nextListingId;
       title;
@@ -119,7 +183,8 @@ actor {
       rent;
       amenities;
       contact;
-      postedBy;
+      postedBy = profile.name;
+      ownerId = null;
       timestamp = Time.now();
     };
     listingStore.add(nextListingId, listing);
@@ -142,6 +207,16 @@ actor {
     listingStore.values().toArray().sort(Listing.compareByRent);
   };
 
+  public shared ({ caller }) func deleteListing(id : Nat) : async () {
+    let existing = switch (listingStore.get(id)) {
+      case (null) {
+        Runtime.trap("Listing does not exist");
+      };
+      case (?listing) { listing };
+    };
+    listingStore.remove(id);
+  };
+
   public query ({ caller }) func getListingsByLocation(location : Text) : async [Listing] {
     let filteredList = listingStore.values().toList<Listing>().filter(
       func(l) { l.location == location }
@@ -149,19 +224,31 @@ actor {
     filteredList.toArray();
   };
 
-  // Community Post Functions
   public shared ({ caller }) func addCommunityPost(name : Text, college : Text, city : Text, message : Text) : async Nat {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can add community posts");
+    };
+
     let post : CommunityPost = {
       id = nextCommunityPostId;
       name;
       college;
       city;
       message;
+      ownerId = null;
       timestamp = Time.now();
     };
     communityPostStore.add(nextCommunityPostId, post);
     nextCommunityPostId += 1;
     post.id;
+  };
+
+  public shared ({ caller }) func deleteCommunityPost(id : Nat) : async () {
+    let _ = switch (communityPostStore.get(id)) {
+      case (null) { Runtime.trap("Post does not exist") };
+      case (?post) { post };
+    };
+    communityPostStore.remove(id);
   };
 
   public query ({ caller }) func getAllCommunityPosts() : async [CommunityPost] {
@@ -183,7 +270,6 @@ actor {
     collegeSet.toArray();
   };
 
-  // Food Spots (Static) Functions
   public query ({ caller }) func getAllFoodSpots() : async [FoodSpot] {
     foodSpotsStore.toArray();
   };
@@ -195,7 +281,6 @@ actor {
     filteredList.toArray();
   };
 
-  // Transport Tips (Static) Functions
   public query ({ caller }) func getAllTransportTips() : async [TransportTip] {
     transportTipsStore.toArray();
   };
@@ -207,7 +292,6 @@ actor {
     filteredList.toArray();
   };
 
-  // Language Phrases (Static) Functions
   public query ({ caller }) func getAllLanguagePhrases() : async [LanguagePhrase] {
     languagePhrasesStore.toArray();
   };

@@ -11,25 +11,38 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowUpDown,
   IndianRupee,
   Loader2,
+  Lock,
   MapPin,
   Phone,
   Plus,
   Star,
+  Trash2,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { Listing } from "../backend.d";
+import { useAuth } from "../hooks/useAuth";
+import { useMyProfile } from "../hooks/useQueries";
 import {
   useAddListing,
   useAllListings,
+  useDeleteListing,
   useListingsSortedByRent,
 } from "../hooks/useQueries";
+
+const PG_PHOTOS = [
+  "/assets/generated/pg-room-1.dim_400x260.jpg",
+  "/assets/generated/pg-room-2.dim_400x260.jpg",
+  "/assets/generated/pg-room-3.dim_400x260.jpg",
+  "/assets/generated/pg-room-4.dim_400x260.jpg",
+  "/assets/generated/pg-room-5.dim_400x260.jpg",
+  "/assets/generated/pg-room-6.dim_400x260.jpg",
+];
 
 const SEED_LISTINGS: Listing[] = [
   {
@@ -74,11 +87,33 @@ const SEED_LISTINGS: Listing[] = [
   },
 ];
 
-function ListingCard({ listing }: { listing: Listing }) {
+function ListingCard({
+  listing,
+  index,
+  isOwner,
+  onDelete,
+}: {
+  listing: Listing;
+  index: number;
+  isOwner: boolean;
+  onDelete: (id: bigint) => void;
+}) {
   const amenityList = listing.amenities
     .split(/[,;]/)
     .map((a) => a.trim())
     .filter(Boolean);
+  const photo = PG_PHOTOS[index % PG_PHOTOS.length];
+  const deleteListing = useDeleteListing();
+
+  async function handleDelete() {
+    try {
+      await deleteListing.mutateAsync(listing.id);
+      onDelete(listing.id);
+      toast.success("Listing removed.");
+    } catch {
+      toast.error("Failed to delete listing.");
+    }
+  }
 
   return (
     <motion.div
@@ -88,7 +123,33 @@ function ListingCard({ listing }: { listing: Listing }) {
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
       <Card className="h-full shadow-card hover:shadow-card-hover transition-shadow duration-200 rounded-2xl overflow-hidden group">
-        <div className="h-2 bg-gradient-to-r from-brand-orange to-primary" />
+        {/* Photo */}
+        <div className="relative overflow-hidden h-44">
+          <img
+            src={photo}
+            alt={listing.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+          {/* Delete button for owner */}
+          {isOwner && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteListing.isPending}
+              className="absolute top-2 right-2 w-8 h-8 rounded-lg bg-white/90 backdrop-blur-sm flex items-center justify-center text-destructive hover:bg-destructive hover:text-white transition-all shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+              aria-label="Delete listing"
+            >
+              {deleteListing.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+            </button>
+          )}
+          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-black/40 to-transparent" />
+        </div>
+
         <CardHeader className="pb-3">
           <CardTitle className="font-display text-lg leading-snug group-hover:text-brand-orange transition-colors">
             {listing.title}
@@ -122,7 +183,7 @@ function ListingCard({ listing }: { listing: Listing }) {
           <div className="pt-2 border-t border-border flex items-center justify-between text-sm">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <Star className="w-3.5 h-3.5" />
-              <span>Posted by {listing.postedBy}</span>
+              <span>By {listing.postedBy}</span>
             </div>
             <a
               href={`tel:${listing.contact}`}
@@ -138,14 +199,16 @@ function ListingCard({ listing }: { listing: Listing }) {
   );
 }
 
-function AddListingForm({ onSuccess }: { onSuccess: () => void }) {
+function AddListingForm({
+  onSuccess,
+  profileName,
+}: { onSuccess: () => void; profileName: string }) {
   const [form, setForm] = useState({
     title: "",
     location: "",
     rent: "",
     amenities: "",
     contact: "",
-    postedBy: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const addListing = useAddListing();
@@ -158,7 +221,6 @@ function AddListingForm({ onSuccess }: { onSuccess: () => void }) {
       newErrors.rent = "Valid rent amount is required";
     if (!form.amenities.trim()) newErrors.amenities = "Amenities are required";
     if (!form.contact.trim()) newErrors.contact = "Contact is required";
-    if (!form.postedBy.trim()) newErrors.postedBy = "Your name is required";
     return newErrors;
   }
 
@@ -177,7 +239,6 @@ function AddListingForm({ onSuccess }: { onSuccess: () => void }) {
         rent: BigInt(Math.round(Number(form.rent))),
         amenities: form.amenities.trim(),
         contact: form.contact.trim(),
-        postedBy: form.postedBy.trim(),
       });
       toast.success("Listing added successfully!");
       onSuccess();
@@ -188,6 +249,12 @@ function AddListingForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      {/* Profile name display */}
+      <div className="px-3 py-2 bg-brand-orange-light rounded-lg text-sm">
+        <span className="text-muted-foreground">Posting as: </span>
+        <span className="font-semibold text-brand-orange">{profileName}</span>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="pg-title">PG / Flat Title *</Label>
@@ -278,22 +345,6 @@ function AddListingForm({ onSuccess }: { onSuccess: () => void }) {
         )}
       </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="pg-postedBy">Your Name *</Label>
-        <Input
-          id="pg-postedBy"
-          placeholder="e.g. Rahul Sharma"
-          value={form.postedBy}
-          onChange={(e) => setForm((f) => ({ ...f, postedBy: e.target.value }))}
-          aria-describedby={errors.postedBy ? "pg-postedBy-error" : undefined}
-        />
-        {errors.postedBy && (
-          <p id="pg-postedBy-error" className="text-destructive text-xs">
-            {errors.postedBy}
-          </p>
-        )}
-      </div>
-
       <Button
         type="submit"
         disabled={addListing.isPending}
@@ -311,6 +362,8 @@ function AddListingForm({ onSuccess }: { onSuccess: () => void }) {
 export default function PGSection() {
   const [sortByRent, setSortByRent] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { isAuthenticated, principal, login } = useAuth();
+  const { data: profile } = useMyProfile(isAuthenticated);
 
   const allListings = useAllListings();
   const sortedListings = useListingsSortedByRent();
@@ -318,6 +371,10 @@ export default function PGSection() {
   const query = sortByRent ? sortedListings : allListings;
   const listings: Listing[] =
     query.data && query.data.length > 0 ? query.data : SEED_LISTINGS;
+
+  function handleDelete(_id: bigint) {
+    // Query already invalidated by mutation
+  }
 
   return (
     <section id="find-pg" className="py-20 bg-white">
@@ -357,36 +414,82 @@ export default function PGSection() {
               {sortByRent ? "Sorted by Rent" : "Sort by Rent"}
             </Button>
 
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-brand-orange hover:opacity-90 text-white font-semibold rounded-xl gap-2">
-                  <Plus className="w-4 h-4" />
-                  Add Listing
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle className="font-display text-xl">
-                    Add a PG / Flat Listing
-                  </DialogTitle>
-                </DialogHeader>
-                <AddListingForm onSuccess={() => setDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
+            {isAuthenticated && profile ? (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-brand-orange hover:opacity-90 text-white font-semibold rounded-xl gap-2">
+                    <Plus className="w-4 h-4" />
+                    Add Listing
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="font-display text-xl">
+                      Add a PG / Flat Listing
+                    </DialogTitle>
+                  </DialogHeader>
+                  <AddListingForm
+                    onSuccess={() => setDialogOpen(false)}
+                    profileName={profile.name}
+                  />
+                </DialogContent>
+              </Dialog>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={login}
+                className="gap-2 border-2 border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white font-semibold rounded-xl transition-all"
+              >
+                <Lock className="w-4 h-4" />
+                Login to Add
+              </Button>
+            )}
           </div>
         </motion.div>
+
+        {/* Login prompt banner */}
+        {!isAuthenticated && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 px-4 py-3 rounded-xl bg-brand-orange-light border border-brand-orange/20 flex items-center gap-3 text-sm"
+          >
+            <Lock className="w-4 h-4 text-brand-orange shrink-0" />
+            <span className="text-foreground/75">
+              <button
+                type="button"
+                onClick={login}
+                className="font-semibold text-brand-orange hover:underline"
+              >
+                Login
+              </button>{" "}
+              to add your own PG listing and manage your posts.
+            </span>
+          </motion.div>
+        )}
 
         {/* Grid */}
         {query.isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {["s1", "s2", "s3", "s4"].map((k) => (
-              <Skeleton key={k} className="h-64 rounded-2xl" />
+              <Skeleton key={k} className="h-72 rounded-2xl" />
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {listings.map((listing) => (
-              <ListingCard key={String(listing.id)} listing={listing} />
+            {listings.map((listing, i) => (
+              <ListingCard
+                key={String(listing.id)}
+                listing={listing}
+                index={i}
+                isOwner={
+                  isAuthenticated &&
+                  !!principal &&
+                  !!listing.ownerId &&
+                  listing.ownerId === principal
+                }
+                onDelete={handleDelete}
+              />
             ))}
           </div>
         )}

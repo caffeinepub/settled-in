@@ -6,6 +6,7 @@ import HeroSection from "./components/HeroSection";
 import LanguageSection from "./components/LanguageSection";
 import Navbar from "./components/Navbar";
 import PGSection from "./components/PGSection";
+import ProfileSetupModal from "./components/ProfileSetupModal";
 import TransportSection from "./components/TransportSection";
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
       </main>
       <Footer />
       <Toaster richColors position="top-right" />
+      <ProfileSetupModal />
     </>
   );
 }

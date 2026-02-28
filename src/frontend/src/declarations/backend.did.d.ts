@@ -12,6 +12,7 @@ import type { Principal } from '@icp-sdk/core/principal';
 
 export interface CommunityPost {
   'id' : bigint,
+  'ownerId' : [] | [string],
   'city' : string,
   'name' : string,
   'message' : string,
@@ -37,6 +38,7 @@ export interface Listing {
   'title' : string,
   'postedBy' : string,
   'contact' : string,
+  'ownerId' : [] | [string],
   'rent' : bigint,
   'amenities' : string,
   'timestamp' : bigint,
@@ -48,25 +50,41 @@ export interface TransportTip {
   'mode' : string,
   'description' : string,
 }
+export interface UserProfile {
+  'city' : string,
+  'name' : string,
+  'college' : string,
+}
+export type UserRole = { 'admin' : null } |
+  { 'user' : null } |
+  { 'guest' : null };
 export interface _SERVICE {
+  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addCommunityPost' : ActorMethod<[string, string, string, string], bigint>,
-  'addListing' : ActorMethod<
-    [string, string, bigint, string, string, string],
-    bigint
-  >,
+  'addListing' : ActorMethod<[string, string, bigint, string, string], bigint>,
+  'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'deleteCommunityPost' : ActorMethod<[bigint], undefined>,
+  'deleteListing' : ActorMethod<[bigint], undefined>,
   'getAllCommunityPosts' : ActorMethod<[], Array<CommunityPost>>,
   'getAllFoodSpots' : ActorMethod<[], Array<FoodSpot>>,
   'getAllLanguagePhrases' : ActorMethod<[], Array<LanguagePhrase>>,
   'getAllListings' : ActorMethod<[], Array<Listing>>,
   'getAllListingsSortedByRent' : ActorMethod<[], Array<Listing>>,
   'getAllTransportTips' : ActorMethod<[], Array<TransportTip>>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCommunityPostsByCollege' : ActorMethod<[string], Array<CommunityPost>>,
   'getDistinctColleges' : ActorMethod<[], Array<string>>,
   'getFoodSpotsByType' : ActorMethod<[string], Array<FoodSpot>>,
   'getLanguagePhrasesByLanguage' : ActorMethod<[string], Array<LanguagePhrase>>,
   'getListingById' : ActorMethod<[bigint], Listing>,
   'getListingsByLocation' : ActorMethod<[string], Array<Listing>>,
+  'getMyProfile' : ActorMethod<[], UserProfile>,
   'getTransportTipsByMode' : ActorMethod<[string], Array<TransportTip>>,
+  'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'isCallerAdmin' : ActorMethod<[], boolean>,
+  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'upsertProfile' : ActorMethod<[string, string, string], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

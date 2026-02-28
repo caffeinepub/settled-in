@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IndianRupee, MapPin, UtensilsCrossed } from "lucide-react";
+import { IndianRupee, MapPin } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import type { FoodSpot } from "../backend.d";
@@ -18,10 +18,30 @@ const TYPE_COLORS: Record<string, string> = {
   dhaba: "bg-red-100 text-red-700 border-red-200",
 };
 
+// AI-generated food photo map by spot name
+const FOOD_PHOTOS_BY_NAME: Record<string, string> = {
+  "Student Pride Mess": "/assets/generated/food-mess.dim_400x260.jpg",
+  "Campus Canteen": "/assets/generated/food-canteen.dim_400x260.jpg",
+  "Youth Point": "/assets/generated/food-restaurant.dim_400x260.jpg",
+  "North Indian Delight": "/assets/generated/food-northindian.dim_400x260.jpg",
+  "Chai Wali Aunty": "/assets/generated/food-cafe.dim_400x260.jpg",
+  "Campus Bites": "/assets/generated/food-dhaba.dim_400x260.jpg",
+};
+
+// Fallback by index
+const FOOD_PHOTOS_BY_INDEX = [
+  "/assets/generated/food-mess.dim_400x260.jpg",
+  "/assets/generated/food-canteen.dim_400x260.jpg",
+  "/assets/generated/food-restaurant.dim_400x260.jpg",
+  "/assets/generated/food-northindian.dim_400x260.jpg",
+  "/assets/generated/food-cafe.dim_400x260.jpg",
+  "/assets/generated/food-dhaba.dim_400x260.jpg",
+];
+
 const SEED_FOOD: FoodSpot[] = [
   {
     id: 1n,
-    name: "Amma's Mess",
+    name: "Student Pride Mess",
     spotType: "mess",
     location: "Near VTU, Bangalore",
     priceRange: "₹60–₹90 per meal",
@@ -30,7 +50,7 @@ const SEED_FOOD: FoodSpot[] = [
   },
   {
     id: 2n,
-    name: "IIT Canteen Block B",
+    name: "Campus Canteen",
     spotType: "canteen",
     location: "IIT Delhi Campus",
     priceRange: "₹40–₹80 per meal",
@@ -39,7 +59,7 @@ const SEED_FOOD: FoodSpot[] = [
   },
   {
     id: 3n,
-    name: "Bunker Kitchen",
+    name: "Youth Point",
     spotType: "restaurant",
     location: "Koramangala, Bangalore",
     priceRange: "₹150–₹300 per person",
@@ -57,7 +77,7 @@ const SEED_FOOD: FoodSpot[] = [
   },
   {
     id: 5n,
-    name: "Punjab da Dhaba",
+    name: "North Indian Delight",
     spotType: "dhaba",
     location: "Sector 17, Chandigarh",
     priceRange: "₹80–₹180 per person",
@@ -75,10 +95,18 @@ const SEED_FOOD: FoodSpot[] = [
   },
 ];
 
-function FoodCard({ spot }: { spot: FoodSpot }) {
+function getFoodPhoto(spot: FoodSpot, index: number): string {
+  return (
+    FOOD_PHOTOS_BY_NAME[spot.name] ||
+    FOOD_PHOTOS_BY_INDEX[index % FOOD_PHOTOS_BY_INDEX.length]
+  );
+}
+
+function FoodCard({ spot, index }: { spot: FoodSpot; index: number }) {
   const typeColor =
     TYPE_COLORS[spot.spotType.toLowerCase()] ||
     "bg-gray-100 text-gray-700 border-gray-200";
+  const photo = getFoodPhoto(spot, index);
 
   return (
     <motion.div
@@ -88,26 +116,28 @@ function FoodCard({ spot }: { spot: FoodSpot }) {
       transition={{ duration: 0.4, ease: "easeOut" }}
     >
       <Card className="h-full shadow-card hover:shadow-card-hover transition-shadow duration-200 rounded-2xl overflow-hidden group">
-        <div
-          className="h-24 flex items-center justify-center"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, oklch(0.92 0.06 195 / 0.3) 0%, oklch(0.96 0.03 80 / 0.6) 100%)",
-          }}
-        >
-          <UtensilsCrossed className="w-10 h-10 text-brand-teal opacity-60" />
-        </div>
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <CardTitle className="font-display text-base leading-snug group-hover:text-brand-teal transition-colors">
-              {spot.name}
-            </CardTitle>
+        {/* Photo */}
+        <div className="relative h-44 overflow-hidden">
+          <img
+            src={photo}
+            alt={spot.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+          <div className="absolute top-2 right-2">
             <Badge
-              className={`text-xs shrink-0 border ${typeColor} font-semibold capitalize`}
+              className={`text-xs border ${typeColor} font-semibold capitalize shadow-sm`}
             >
               {spot.spotType}
             </Badge>
           </div>
+          <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-black/40 to-transparent" />
+        </div>
+
+        <CardHeader className="pb-2">
+          <CardTitle className="font-display text-base leading-snug group-hover:text-brand-teal transition-colors">
+            {spot.name}
+          </CardTitle>
           <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
             <MapPin className="w-3 h-3 text-brand-teal" />
             <span>{spot.location}</span>
@@ -190,13 +220,13 @@ export default function FoodSection() {
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {["s1", "s2", "s3", "s4", "s5", "s6"].map((k) => (
-              <Skeleton key={k} className="h-56 rounded-2xl" />
+              <Skeleton key={k} className="h-72 rounded-2xl" />
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {spots.map((spot) => (
-              <FoodCard key={String(spot.id)} spot={spot} />
+            {spots.map((spot, i) => (
+              <FoodCard key={String(spot.id)} spot={spot} index={i} />
             ))}
           </div>
         )}

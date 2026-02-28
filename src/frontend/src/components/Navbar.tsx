@@ -1,7 +1,16 @@
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LogIn, LogOut, Menu, User, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import { useAuth } from "../hooks/useAuth";
+import { useMyProfile } from "../hooks/useQueries";
 
 const navLinks = [
   { label: "Home", href: "#home" },
@@ -20,9 +29,111 @@ function scrollToSection(href: string) {
   }
 }
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function AuthButton() {
+  const { isAuthenticated, isLoggingIn, login, logout, isInitializing } =
+    useAuth();
+  const { data: profile } = useMyProfile(isAuthenticated);
+
+  if (isInitializing) {
+    return <div className="w-8 h-8 rounded-full bg-muted animate-pulse" />;
+  }
+
+  if (isAuthenticated && profile) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full"
+          >
+            <Avatar className="h-8 w-8 bg-brand-orange-light">
+              <AvatarFallback className="text-xs font-bold text-brand-orange bg-brand-orange-light">
+                {getInitials(profile.name)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="hidden sm:block text-sm font-medium text-foreground/80 max-w-[120px] truncate">
+              {profile.name}
+            </span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <div className="px-3 py-2 border-b border-border mb-1">
+            <p className="text-sm font-semibold truncate">{profile.name}</p>
+            <p className="text-xs text-muted-foreground truncate">
+              {profile.college}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {profile.city}
+            </p>
+          </div>
+          <DropdownMenuItem
+            onClick={logout}
+            className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2 cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  if (isAuthenticated) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            className="flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-full"
+          >
+            <Avatar className="h-8 w-8 bg-brand-orange-light">
+              <AvatarFallback className="text-xs font-bold text-brand-orange bg-brand-orange-light">
+                <User className="w-4 h-4" />
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuItem
+            onClick={logout}
+            className="text-destructive focus:text-destructive focus:bg-destructive/10 gap-2 cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      onClick={login}
+      disabled={isLoggingIn}
+      className="gap-2 border-2 border-brand-orange text-brand-orange hover:bg-brand-orange hover:text-white font-semibold transition-all"
+    >
+      <LogIn className="w-4 h-4" />
+      {isLoggingIn ? "Logging in..." : "Login"}
+    </Button>
+  );
+}
+
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { isAuthenticated, isLoggingIn, login, logout } = useAuth();
+  const { data: profile } = useMyProfile(isAuthenticated);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -66,7 +177,7 @@ export default function Navbar() {
           ))}
         </ul>
 
-        {/* CTA */}
+        {/* Right side: CTA + Auth */}
         <div className="hidden md:flex items-center gap-3">
           <Button
             onClick={() => scrollToSection("#find-pg")}
@@ -75,6 +186,7 @@ export default function Navbar() {
           >
             Find PG
           </Button>
+          <AuthButton />
         </div>
 
         {/* Mobile menu toggle */}
@@ -114,7 +226,7 @@ export default function Navbar() {
                   </button>
                 </li>
               ))}
-              <li className="pt-2">
+              <li className="pt-2 flex flex-col gap-2">
                 <Button
                   onClick={() => {
                     scrollToSection("#find-pg");
@@ -125,6 +237,44 @@ export default function Navbar() {
                 >
                   Find PG
                 </Button>
+                {isAuthenticated ? (
+                  <div className="space-y-1">
+                    {profile && (
+                      <div className="px-3 py-2 bg-muted/50 rounded-lg">
+                        <p className="text-sm font-semibold">{profile.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {profile.college}
+                        </p>
+                      </div>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        logout();
+                        setMenuOpen(false);
+                      }}
+                      className="w-full gap-2 text-destructive border-destructive/30 hover:bg-destructive/10"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      login();
+                      setMenuOpen(false);
+                    }}
+                    disabled={isLoggingIn}
+                    className="w-full gap-2 border-2 border-brand-orange text-brand-orange"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    {isLoggingIn ? "Logging in..." : "Login"}
+                  </Button>
+                )}
               </li>
             </ul>
           </motion.div>

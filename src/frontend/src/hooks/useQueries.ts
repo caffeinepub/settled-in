@@ -5,8 +5,44 @@ import type {
   LanguagePhrase,
   Listing,
   TransportTip,
+  UserProfile,
 } from "../backend.d";
 import { useActor } from "./useActor";
+
+// ── User Profile ──────────────────────────────────────────
+export function useMyProfile(enabled = true) {
+  const { actor, isFetching } = useActor();
+  return useQuery<UserProfile | null>({
+    queryKey: ["my-profile"],
+    queryFn: async () => {
+      if (!actor) return null;
+      try {
+        return await actor.getCallerUserProfile();
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!actor && !isFetching && enabled,
+  });
+}
+
+export function useUpsertProfile() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      name: string;
+      college: string;
+      city: string;
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      return actor.upsertProfile(data.name, data.college, data.city);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["my-profile"] });
+    },
+  });
+}
 
 // ── Listings ──────────────────────────────────────────────
 export function useAllListings() {
@@ -43,7 +79,6 @@ export function useAddListing() {
       rent: bigint;
       amenities: string;
       contact: string;
-      postedBy: string;
     }) => {
       if (!actor) throw new Error("Actor not ready");
       return actor.addListing(
@@ -52,8 +87,22 @@ export function useAddListing() {
         data.rent,
         data.amenities,
         data.contact,
-        data.postedBy,
       );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["listings"] });
+      qc.invalidateQueries({ queryKey: ["listings-sorted"] });
+    },
+  });
+}
+
+export function useDeleteListing() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error("Actor not ready");
+      return actor.deleteListing(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["listings"] });
@@ -155,6 +204,21 @@ export function useAddCommunityPost() {
         data.city,
         data.message,
       );
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["community-posts"] });
+      qc.invalidateQueries({ queryKey: ["distinct-colleges"] });
+    },
+  });
+}
+
+export function useDeleteCommunityPost() {
+  const { actor } = useActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: bigint) => {
+      if (!actor) throw new Error("Actor not ready");
+      return actor.deleteCommunityPost(id);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["community-posts"] });

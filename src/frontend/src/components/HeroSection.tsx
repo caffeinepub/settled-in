@@ -140,9 +140,9 @@ export default function HeroSection() {
               aria-hidden="true"
             />
             <img
-              src="/assets/generated/hero-illustration.dim_800x500.png"
-              alt="Student arriving in a new city with excitement"
-              className="relative z-10 w-full max-w-lg lg:max-w-none rounded-2xl object-cover"
+              src="/assets/generated/hero-banner.dim_1200x500.jpg"
+              alt="Students arriving in a new city, excited and ready to settle in"
+              className="relative z-10 w-full max-w-lg lg:max-w-none rounded-2xl object-cover shadow-card-hover"
               loading="eager"
             />
           </motion.div>

@@ -8,8 +8,14 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const UserRole = IDL.Variant({
+  'admin' : IDL.Null,
+  'user' : IDL.Null,
+  'guest' : IDL.Null,
+});
 export const CommunityPost = IDL.Record({
   'id' : IDL.Nat,
+  'ownerId' : IDL.Opt(IDL.Text),
   'city' : IDL.Text,
   'name' : IDL.Text,
   'message' : IDL.Text,
@@ -35,6 +41,7 @@ export const Listing = IDL.Record({
   'title' : IDL.Text,
   'postedBy' : IDL.Text,
   'contact' : IDL.Text,
+  'ownerId' : IDL.Opt(IDL.Text),
   'rent' : IDL.Nat,
   'amenities' : IDL.Text,
   'timestamp' : IDL.Int,
@@ -46,24 +53,35 @@ export const TransportTip = IDL.Record({
   'mode' : IDL.Text,
   'description' : IDL.Text,
 });
+export const UserProfile = IDL.Record({
+  'city' : IDL.Text,
+  'name' : IDL.Text,
+  'college' : IDL.Text,
+});
 
 export const idlService = IDL.Service({
+  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addCommunityPost' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
       [IDL.Nat],
       [],
     ),
   'addListing' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
       [IDL.Nat],
       [],
     ),
+  'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'deleteCommunityPost' : IDL.Func([IDL.Nat], [], []),
+  'deleteListing' : IDL.Func([IDL.Nat], [], []),
   'getAllCommunityPosts' : IDL.Func([], [IDL.Vec(CommunityPost)], ['query']),
   'getAllFoodSpots' : IDL.Func([], [IDL.Vec(FoodSpot)], ['query']),
   'getAllLanguagePhrases' : IDL.Func([], [IDL.Vec(LanguagePhrase)], ['query']),
   'getAllListings' : IDL.Func([], [IDL.Vec(Listing)], ['query']),
   'getAllListingsSortedByRent' : IDL.Func([], [IDL.Vec(Listing)], ['query']),
   'getAllTransportTips' : IDL.Func([], [IDL.Vec(TransportTip)], ['query']),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCommunityPostsByCollege' : IDL.Func(
       [IDL.Text],
       [IDL.Vec(CommunityPost)],
@@ -78,18 +96,33 @@ export const idlService = IDL.Service({
     ),
   'getListingById' : IDL.Func([IDL.Nat], [Listing], ['query']),
   'getListingsByLocation' : IDL.Func([IDL.Text], [IDL.Vec(Listing)], ['query']),
+  'getMyProfile' : IDL.Func([], [UserProfile], ['query']),
   'getTransportTipsByMode' : IDL.Func(
       [IDL.Text],
       [IDL.Vec(TransportTip)],
       ['query'],
     ),
+  'getUserProfile' : IDL.Func(
+      [IDL.Principal],
+      [IDL.Opt(UserProfile)],
+      ['query'],
+    ),
+  'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'upsertProfile' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
 });
 
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const UserRole = IDL.Variant({
+    'admin' : IDL.Null,
+    'user' : IDL.Null,
+    'guest' : IDL.Null,
+  });
   const CommunityPost = IDL.Record({
     'id' : IDL.Nat,
+    'ownerId' : IDL.Opt(IDL.Text),
     'city' : IDL.Text,
     'name' : IDL.Text,
     'message' : IDL.Text,
@@ -115,6 +148,7 @@ export const idlFactory = ({ IDL }) => {
     'title' : IDL.Text,
     'postedBy' : IDL.Text,
     'contact' : IDL.Text,
+    'ownerId' : IDL.Opt(IDL.Text),
     'rent' : IDL.Nat,
     'amenities' : IDL.Text,
     'timestamp' : IDL.Int,
@@ -126,18 +160,27 @@ export const idlFactory = ({ IDL }) => {
     'mode' : IDL.Text,
     'description' : IDL.Text,
   });
+  const UserProfile = IDL.Record({
+    'city' : IDL.Text,
+    'name' : IDL.Text,
+    'college' : IDL.Text,
+  });
   
   return IDL.Service({
+    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addCommunityPost' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [IDL.Nat],
         [],
       ),
     'addListing' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text],
         [IDL.Nat],
         [],
       ),
+    'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'deleteCommunityPost' : IDL.Func([IDL.Nat], [], []),
+    'deleteListing' : IDL.Func([IDL.Nat], [], []),
     'getAllCommunityPosts' : IDL.Func([], [IDL.Vec(CommunityPost)], ['query']),
     'getAllFoodSpots' : IDL.Func([], [IDL.Vec(FoodSpot)], ['query']),
     'getAllLanguagePhrases' : IDL.Func(
@@ -148,6 +191,8 @@ export const idlFactory = ({ IDL }) => {
     'getAllListings' : IDL.Func([], [IDL.Vec(Listing)], ['query']),
     'getAllListingsSortedByRent' : IDL.Func([], [IDL.Vec(Listing)], ['query']),
     'getAllTransportTips' : IDL.Func([], [IDL.Vec(TransportTip)], ['query']),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCommunityPostsByCollege' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(CommunityPost)],
@@ -166,11 +211,20 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(Listing)],
         ['query'],
       ),
+    'getMyProfile' : IDL.Func([], [UserProfile], ['query']),
     'getTransportTipsByMode' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(TransportTip)],
         ['query'],
       ),
+    'getUserProfile' : IDL.Func(
+        [IDL.Principal],
+        [IDL.Opt(UserProfile)],
+        ['query'],
+      ),
+    'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'upsertProfile' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
   });
 };
 

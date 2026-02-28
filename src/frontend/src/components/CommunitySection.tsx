@@ -20,14 +20,26 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { GraduationCap, Loader2, MapPin, Plus, Users } from "lucide-react";
+import {
+  GraduationCap,
+  Loader2,
+  Lock,
+  MapPin,
+  MessageSquarePlus,
+  Plus,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import type { CommunityPost } from "../backend.d";
+import { useAuth } from "../hooks/useAuth";
+import { useMyProfile } from "../hooks/useQueries";
 import {
   useAddCommunityPost,
   useAllCommunityPosts,
+  useDeleteCommunityPost,
   useDistinctColleges,
 } from "../hooks/useQueries";
 
@@ -105,8 +117,26 @@ const AVATAR_COLORS = [
   "bg-pink-200 text-pink-800",
 ];
 
-function PostCard({ post, index }: { post: CommunityPost; index: number }) {
+function PostCard({
+  post,
+  index,
+  isOwner,
+}: {
+  post: CommunityPost;
+  index: number;
+  isOwner: boolean;
+}) {
   const avatarColor = AVATAR_COLORS[index % AVATAR_COLORS.length];
+  const deletePost = useDeleteCommunityPost();
+
+  async function handleDelete() {
+    try {
+      await deletePost.mutateAsync(post.id);
+      toast.success("Post removed.");
+    } catch {
+      toast.error("Failed to delete post.");
+    }
+  }
 
   return (
     <motion.div
@@ -126,9 +156,26 @@ function PostCard({ post, index }: { post: CommunityPost; index: number }) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <span className="font-semibold text-sm">{post.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {timeAgo(post.timestamp)}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    {timeAgo(post.timestamp)}
+                  </span>
+                  {isOwner && (
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={deletePost.isPending}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                      aria-label="Delete post"
+                    >
+                      {deletePost.isPending ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="flex items-center gap-3 mt-1 flex-wrap">
                 <span className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -161,41 +208,38 @@ function PostCard({ post, index }: { post: CommunityPost; index: number }) {
   );
 }
 
-function PostForm({ onSuccess }: { onSuccess: () => void }) {
-  const [form, setForm] = useState({
-    name: "",
-    college: "",
-    city: "",
-    message: "",
-  });
-  const [errors, setErrors] = useState<Record<string, string>>({});
+function PostForm({
+  onSuccess,
+  profileName,
+  profileCollege,
+  profileCity,
+}: {
+  onSuccess: () => void;
+  profileName: string;
+  profileCollege: string;
+  profileCity: string;
+}) {
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const addPost = useAddCommunityPost();
-
-  function validate() {
-    const errs: Record<string, string> = {};
-    if (!form.name.trim()) errs.name = "Name is required";
-    if (!form.college.trim()) errs.college = "College is required";
-    if (!form.city.trim()) errs.city = "City is required";
-    if (!form.message.trim()) errs.message = "Message is required";
-    if (form.message.length > 400)
-      errs.message = "Message must be under 400 characters";
-    return errs;
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
+    if (!message.trim()) {
+      setError("Message is required");
       return;
     }
-    setErrors({});
+    if (message.length > 400) {
+      setError("Message must be under 400 characters");
+      return;
+    }
+    setError("");
     try {
       await addPost.mutateAsync({
-        name: form.name.trim(),
-        college: form.college.trim(),
-        city: form.city.trim(),
-        message: form.message.trim(),
+        name: profileName,
+        college: profileCollege,
+        city: profileCity,
+        message: message.trim(),
       });
       toast.success("Introduction posted! 🎉");
       onSuccess();
@@ -206,76 +250,34 @@ function PostForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="post-name">Your Name *</Label>
-          <Input
-            id="post-name"
-            placeholder="e.g. Riya Sharma"
-            value={form.name}
-            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            aria-describedby={errors.name ? "post-name-error" : undefined}
-          />
-          {errors.name && (
-            <p id="post-name-error" className="text-destructive text-xs">
-              {errors.name}
-            </p>
-          )}
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="post-college">College / University *</Label>
-          <Input
-            id="post-college"
-            placeholder="e.g. IIT Madras"
-            value={form.college}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, college: e.target.value }))
-            }
-            aria-describedby={errors.college ? "post-college-error" : undefined}
-          />
-          {errors.college && (
-            <p id="post-college-error" className="text-destructive text-xs">
-              {errors.college}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="space-y-1.5">
-        <Label htmlFor="post-city">Current City *</Label>
-        <Input
-          id="post-city"
-          placeholder="e.g. Bangalore"
-          value={form.city}
-          onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-          aria-describedby={errors.city ? "post-city-error" : undefined}
-        />
-        {errors.city && (
-          <p id="post-city-error" className="text-destructive text-xs">
-            {errors.city}
-          </p>
-        )}
+      {/* Profile info display */}
+      <div className="px-3 py-2 bg-brand-teal/10 rounded-lg space-y-1">
+        <p className="text-xs text-muted-foreground">Posting as:</p>
+        <p className="text-sm font-semibold">{profileName}</p>
+        <p className="text-xs text-muted-foreground">
+          {profileCollege} · {profileCity}
+        </p>
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="post-message">
           Your Introduction *{" "}
           <span className="text-muted-foreground font-normal">
-            ({form.message.length}/400)
+            ({message.length}/400)
           </span>
         </Label>
         <Textarea
           id="post-message"
           placeholder="Tell others where you're from, what you study, what you're looking for — a study group, food buddies, sports team..."
           rows={4}
-          value={form.message}
-          onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-          aria-describedby={errors.message ? "post-message-error" : undefined}
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          aria-describedby={error ? "post-message-error" : undefined}
           maxLength={400}
         />
-        {errors.message && (
+        {error && (
           <p id="post-message-error" className="text-destructive text-xs">
-            {errors.message}
+            {error}
           </p>
         )}
       </div>
@@ -295,6 +297,8 @@ function PostForm({ onSuccess }: { onSuccess: () => void }) {
 export default function CommunitySection() {
   const [selectedCollege, setSelectedCollege] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const { isAuthenticated, principal, login } = useAuth();
+  const { data: profile } = useMyProfile(isAuthenticated);
 
   const { data: colleges } = useDistinctColleges();
   const { data: fetchedPosts, isLoading } = useAllCommunityPosts(
@@ -341,23 +345,60 @@ export default function CommunitySection() {
             </p>
           </div>
 
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-brand-teal hover:opacity-90 text-white font-semibold rounded-xl gap-2 shrink-0">
-                <Plus className="w-4 h-4" />
-                Post Introduction
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle className="font-display text-xl">
-                  Introduce Yourself 👋
-                </DialogTitle>
-              </DialogHeader>
-              <PostForm onSuccess={() => setDialogOpen(false)} />
-            </DialogContent>
-          </Dialog>
+          {isAuthenticated && profile ? (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-brand-teal hover:opacity-90 text-white font-semibold rounded-xl gap-2 shrink-0">
+                  <Plus className="w-4 h-4" />
+                  Post Introduction
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="font-display text-xl">
+                    Introduce Yourself 👋
+                  </DialogTitle>
+                </DialogHeader>
+                <PostForm
+                  onSuccess={() => setDialogOpen(false)}
+                  profileName={profile.name}
+                  profileCollege={profile.college}
+                  profileCity={profile.city}
+                />
+              </DialogContent>
+            </Dialog>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={login}
+              className="gap-2 border-2 border-brand-teal text-brand-teal hover:bg-brand-teal hover:text-white font-semibold rounded-xl transition-all shrink-0"
+            >
+              <Lock className="w-4 h-4" />
+              Login to Post
+            </Button>
+          )}
         </motion.div>
+
+        {/* Login prompt */}
+        {!isAuthenticated && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 px-4 py-3 rounded-xl bg-brand-teal/10 border border-brand-teal/20 flex items-center gap-3 text-sm"
+          >
+            <MessageSquarePlus className="w-4 h-4 text-brand-teal shrink-0" />
+            <span className="text-foreground/75">
+              <button
+                type="button"
+                onClick={login}
+                className="font-semibold text-brand-teal hover:underline"
+              >
+                Login
+              </button>{" "}
+              to introduce yourself and connect with fellow students.
+            </span>
+          </motion.div>
+        )}
 
         {/* College filter */}
         <div className="flex items-center gap-3 mb-6 flex-wrap">
@@ -388,7 +429,17 @@ export default function CommunitySection() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {posts.map((post, i) => (
-              <PostCard key={String(post.id)} post={post} index={i} />
+              <PostCard
+                key={String(post.id)}
+                post={post}
+                index={i}
+                isOwner={
+                  isAuthenticated &&
+                  !!principal &&
+                  !!post.ownerId &&
+                  post.ownerId === principal
+                }
+              />
             ))}
           </div>
         )}
