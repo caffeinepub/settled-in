@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Bricolage Grotesque (Display) ── */
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque[opsz,wdth,wght].woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ── Plus Jakarta Sans (Body) ── */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans[wght].woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+
+    /* Settled IN palette — warm orange/coral primary, teal secondary */
+    /* Backgrounds */
+    --background: 0.985 0.005 85;
+    --foreground: 0.18 0.04 45;
+
+    /* Cards */
+    --card: 1 0 0;
+    --card-foreground: 0.18 0.04 45;
+    --popover: 1 0 0;
+    --popover-foreground: 0.18 0.04 45;
+
+    /* Primary — deep coral/orange */
+    --primary: 0.62 0.22 38;
+    --primary-foreground: 1 0 0;
+
+    /* Secondary — warm teal */
+    --secondary: 0.55 0.12 195;
+    --secondary-foreground: 1 0 0;
+
+    /* Muted */
+    --muted: 0.95 0.01 75;
+    --muted-foreground: 0.5 0.04 60;
+
+    /* Accent — warm amber */
+    --accent: 0.88 0.12 80;
+    --accent-foreground: 0.18 0.04 45;
+
+    /* Destructive */
+    --destructive: 0.577 0.245 27.325;
+    --destructive-foreground: 1 0 0;
+
+    /* Borders / Input */
+    --border: 0.88 0.03 75;
+    --input: 0.88 0.03 75;
+    --ring: 0.62 0.22 38;
+
+    /* Charts */
+    --chart-1: 0.62 0.22 38;
+    --chart-2: 0.55 0.12 195;
+    --chart-3: 0.75 0.15 80;
+    --chart-4: 0.65 0.18 155;
+    --chart-5: 0.55 0.2 25;
+
+    /* Sidebar */
+    --sidebar: 0.98 0.008 80;
+    --sidebar-foreground: 0.18 0.04 45;
+    --sidebar-primary: 0.62 0.22 38;
+    --sidebar-primary-foreground: 1 0 0;
+    --sidebar-accent: 0.93 0.02 75;
+    --sidebar-accent-foreground: 0.18 0.04 45;
+    --sidebar-border: 0.88 0.03 75;
+    --sidebar-ring: 0.62 0.22 38;
+
+    /* Custom brand tokens */
+    --brand-orange: 0.62 0.22 38;
+    --brand-orange-light: 0.92 0.08 60;
+    --brand-teal: 0.55 0.12 195;
+    --brand-teal-light: 0.92 0.06 195;
+    --brand-warm-bg: 0.97 0.01 80;
+    --brand-section-alt: 0.95 0.02 195;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Plus Jakarta Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5 {
+    font-family: "Bricolage Grotesque", sans-serif;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: "Bricolage Grotesque", sans-serif;
+  }
+
+  .font-body {
+    font-family: "Plus Jakarta Sans", sans-serif;
+  }
+
+  .text-brand-orange {
+    color: oklch(var(--brand-orange));
+  }
+
+  .text-brand-teal {
+    color: oklch(var(--brand-teal));
+  }
+
+  .bg-brand-orange {
+    background-color: oklch(var(--brand-orange));
+  }
+
+  .bg-brand-teal {
+    background-color: oklch(var(--brand-teal));
+  }
+
+  .bg-brand-orange-light {
+    background-color: oklch(var(--brand-orange-light));
+  }
+
+  .bg-brand-teal-light {
+    background-color: oklch(var(--brand-teal-light));
+  }
+
+  .bg-brand-warm {
+    background-color: oklch(var(--brand-warm-bg));
+  }
+
+  .bg-brand-section-alt {
+    background-color: oklch(var(--brand-section-alt));
+  }
+
+  .flip-card {
+    perspective: 1000px;
+  }
+
+  .flip-card-inner {
+    transform-style: preserve-3d;
+    transition: transform 0.6s ease;
+  }
+
+  .flip-card:hover .flip-card-inner {
+    transform: rotateY(180deg);
+  }
+
+  .flip-card-front,
+  .flip-card-back {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg);
+  }
+}
